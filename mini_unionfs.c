@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <dirent.h>
 
 // Global state to store our branch paths
 struct mini_unionfs_state {
@@ -66,15 +67,49 @@ static int unionfs_getattr(const char *path, struct stat *stbuf, struct fuse_fil
 // readdir is required to actually see files
 static int unionfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                            off_t offset, struct fuse_file_info *fi, enum fuse_readdir_flags flags) {
-    (void) offset;
-    (void) fi;
-    (void) flags;
+    (void) offset; (void) fi; (void) flags;
 
-    filler(buf, ".", NULL, 0, 0);
-    filler(buf, "..", NULL, 0, 0);
+    char upper_p[1024], lower_p[1024];
+    sprintf(upper_p, "%s%s", UNIONFS_DATA->upper_dir, path);
+    sprintf(lower_p, "%s%s", UNIONFS_DATA->lower_dir, path);
 
-    // For now, this is a placeholder. 
-    // You will later add code here to loop through actual directories.
+    // We use a simple approach: fill from upper, then fill from lower
+    // Note: A professional version would use a hash table to track duplicates/whiteouts
+    
+    // 1. Read from Upper Directory
+    DIR *dp = opendir(upper_p);
+    if (dp != NULL) {
+        struct dirent *de;
+        while ((de = readdir(dp)) != NULL) {
+            // Skip whiteout metadata files from the listing
+            if (strncmp(de->d_name, ".wh.", 4) == 0) continue;
+            
+            if (filler(buf, de->d_name, NULL, 0, 0)) break;
+        }
+        closedir(dp);
+    }
+
+    // 2. Read from Lower Directory
+    dp = opendir(lower_p);
+    if (dp != NULL) {
+        struct dirent *de;
+        while ((de = readdir(dp)) != NULL) {
+            // Check if this file is already in the upper_dir (Precedence)
+            char check_upper[1024];
+            sprintf(check_upper, "%s/%s", upper_p, de->d_name);
+            
+            char check_wh[1024];
+            sprintf(check_wh, "%s/.wh.%s", upper_p, de->d_name);
+
+            struct stat st;
+            // Only add if it doesn't exist in upper AND isn't whiteouted
+            if (lstat(check_upper, &st) != 0 && lstat(check_wh, &st) != 0) {
+                if (filler(buf, de->d_name, NULL, 0, 0)) break;
+            }
+        }
+        closedir(dp);
+    }
+
     return 0;
 }
 
