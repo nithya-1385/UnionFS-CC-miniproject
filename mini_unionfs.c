@@ -185,6 +185,37 @@ static int unionfs_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+static int unionfs_unlink(const char *path) {
+    char upper_path[1024], lower_path[1024], whiteout_path[1024];
+    sprintf(upper_path, "%s%s", UNIONFS_DATA->upper_dir, path);
+    sprintf(lower_path, "%s%s", UNIONFS_DATA->lower_dir, path);
+
+    char *slash = strrchr(path, '/');
+    if (slash) {
+        sprintf(whiteout_path, "%s%.*s/.wh.%s", UNIONFS_DATA->upper_dir, (int)(slash - path), path, slash + 1);
+    } else {
+        sprintf(whiteout_path, "%s/.wh.%s", UNIONFS_DATA->upper_dir, path);
+    }
+
+    // CASE A: File exists in Upper Layer 
+    if (access(upper_path, F_OK) == 0) {
+        unlink(upper_path);
+    }
+
+    // CASE B: File exists in Lower Layer
+    // need to create a whiteout in the Upper Layer to "hide" it
+    if (access(lower_path, F_OK) == 0) {
+        FILE *wh = fopen(whiteout_path, "w");
+        if (wh) {
+            fclose(wh);
+        } else {
+            return -errno;
+        }
+    }
+
+    return 0;
+}
+
 static struct fuse_operations unionfs_oper = {
     .getattr = unionfs_getattr,
     .readdir = unionfs_readdir,
@@ -192,6 +223,7 @@ static struct fuse_operations unionfs_oper = {
     .read    = unionfs_read,
     .write   = unionfs_write,
     .release = unionfs_release,
+    .unlink  = unionfs_unlink,
 };
 
 int main(int argc, char *argv[]) {
