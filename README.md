@@ -2,14 +2,14 @@
 
 ## 📌 Overview
 
-This project implements a simplified **Union File System (UnionFS)** using **FUSE (Filesystem in Userspace)**.
+This project implements a simplified Union File System (UnionFS) using FUSE in a Linux environment. It combines multiple directories into a single unified virtual file system while maintaining a read-only lower layer and a writable upper layer. The system supports Copy-on-Write (CoW) to preserve original data and uses whiteout files to handle deletions, closely simulating the file system behavior used in container technologies like Docker.
 
-It mimics how container systems like Docker manage layered file systems:
+It mimics how container systems manage layered file systems by stacking:
 
-* A **read-only lower layer** (base image)
-* A **read-write upper layer** (container layer)
+* A read-only lower layer (base image)
+* A read-write upper layer (container layer)
 
-These layers are merged into a single virtual filesystem.
+These layers are merged to provide a single coherent filesystem view.
 
 ---
 
@@ -54,8 +54,10 @@ These layers are merged into a single virtual filesystem.
 
 ## 🛠️ Requirements
 
-* Ubuntu 22.04 (or similar Linux), Or wsl in windows
-* FUSE3
+- Ubuntu 22.04 (or any Linux environment)
+- OR Windows with WSL (Windows Subsystem for Linux)
+- FUSE3
+- GCC compiler
 
 Install dependencies:
 
