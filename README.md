@@ -109,7 +109,9 @@ sudo ./mini_unionfs unionfs_test_env/lower unionfs_test_env/upper unionfs_test_e
 ls unionfs_test_env/mnt
 cat unionfs_test_env/mnt/base.txt
 ```
+
 base.txt and its contents will be visible now. Once stopping the filesystem command base.txt will no longer be visible
+
 ---
 
 ### Test 2: Copy-on-Write
